@@ -19,7 +19,8 @@ def simp(p,t):
         if match:
             pos.append(i)
             align1=align+1
-    return pos,count,align1,n
+    return pos,count,align1,n ##return position of matches, count for comparison number, align for alignments# when matched.
+    ##n for total alignment#
     
 ```
 
@@ -64,7 +65,7 @@ p2="GGCGCGGTGGCTCACGCCTGTAAT"
 
 
 ```python
-seq=""
+seq="" ##read genomic data
 fh=open("/Users/daxinggao/Downloads/chr1.GRCh38.excerpt.fasta")
 for line in fh:
     if not line.startswith(">"):
@@ -347,7 +348,7 @@ ind.query(p)
 
 
 ```python
-def appro(p,t,n):
+def appro(p,t,n): ##approximate matching using k-mer segment to find match
     matches=[]
     seg=3
     ind=Index(t,8)
@@ -435,7 +436,7 @@ class SubseqIndex(object):
 
 
 ```python
-def appro2(p,t,n):
+def appro2(p,t,n):##approximate matching using k-mer segment to find match
     ind2=SubseqIndex(t,8,3)
     matches=[]
     hit=0
