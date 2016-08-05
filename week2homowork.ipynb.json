@@ -1,0 +1,796 @@
+{
+ "cells": [
+  {
+   "cell_type": "code",
+   "execution_count": 61,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [],
+   "source": [
+    "##simple alignment\n",
+    "def simp(p,t):\n",
+    "    count=0\n",
+    "    align=0\n",
+    "    n=0\n",
+    "    pos=[]\n",
+    "    for i in range(len(t)-len(p)+1):\n",
+    "        match=True\n",
+    "        n+=1\n",
+    "        for j in range(len(p)):\n",
+    "            count+=1\n",
+    "            if p[j]!=t[i+j]:\n",
+    "                match=False\n",
+    "                align+=1\n",
+    "                break\n",
+    "        if match:\n",
+    "            pos.append(i)\n",
+    "            align1=align+1\n",
+    "    return pos,count,align1,n\n",
+    "    "
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 62,
+   "metadata": {
+    "collapsed": true
+   },
+   "outputs": [],
+   "source": [
+    "p = 'CTGT'\n",
+    "ten_as = 'AAAAAAAAAA'\n",
+    "t = ten_as + 'CTGT' + ten_as + 'CTTT' + ten_as + 'CGGG' + ten_as\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 2,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "'AAAAAAAAAACTGTAAAAAAAAAACTTTAAAAAAAAAACGGGAAAAAAAAAA'"
+      ]
+     },
+     "execution_count": 2,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "t\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 63,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "([0, 14, 28, 42], 214, 40, 43)"
+      ]
+     },
+     "execution_count": 63,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "simp(ten_as,t)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 71,
+   "metadata": {
+    "collapsed": true
+   },
+   "outputs": [],
+   "source": [
+    "p1=\"GGCGCGGTGGCTCACGCCTGTAATCCCAGCACTTTGGGAGGCCGAGG\"\n",
+    "p2=\"GGCGCGGTGGCTCACGCCTGTAAT\""
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 38,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [],
+   "source": [
+    "seq=\"\"\n",
+    "fh=open(\"/Users/daxinggao/Downloads/chr1.GRCh38.excerpt.fasta\")\n",
+    "for line in fh:\n",
+    "    if not line.startswith(\">\"):\n",
+    "        seq+=line.rstrip()\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 64,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "([56922], 984143, 56923, 799954)"
+      ]
+     },
+     "execution_count": 64,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "simp(p1,seq)\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 69,
+   "metadata": {
+    "collapsed": true
+   },
+   "outputs": [],
+   "source": [
+    "def boyer_moore(p, p_bm, t):\n",
+    "    \"\"\" Do Boyer-Moore matching. p=pattern, t=text,\n",
+    "        p_bm=BoyerMoore object for p \"\"\"\n",
+    "    i = 0\n",
+    "    count=0\n",
+    "    align=0\n",
+    "    n=0\n",
+    "    occurrences = []\n",
+    "    while i < len(t) - len(p) + 1:\n",
+    "        shift = 1\n",
+    "        count+=1\n",
+    "        mismatched = False\n",
+    "        n+=1\n",
+    "        for j in range(len(p)-1, -1, -1):\n",
+    "            if p[j] != t[i+j]:\n",
+    "                skip_bc = p_bm.bad_character_rule(j, t[i+j])\n",
+    "                skip_gs = p_bm.good_suffix_rule(j)\n",
+    "                shift = max(shift, skip_bc, skip_gs)\n",
+    "                mismatched = True\n",
+    "                align+=1\n",
+    "                break\n",
+    "        if not mismatched:\n",
+    "            occurrences.append(i)\n",
+    "            skip_gs = p_bm.match_skip()\n",
+    "            shift = max(shift, skip_gs)\n",
+    "            align1=align+1\n",
+    "        i += shift\n",
+    "    return occurrences,count,align1,n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 66,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [],
+   "source": [
+    "\n",
+    "import unittest\n",
+    "\n",
+    "\n",
+    "def z_array(s):\n",
+    "    \"\"\" Use Z algorithm (Gusfield theorem 1.4.1) to preprocess s \"\"\"\n",
+    "    assert len(s) > 1\n",
+    "    z = [len(s)] + [0] * (len(s)-1)\n",
+    "\n",
+    "    # Initial comparison of s[1:] with prefix\n",
+    "    for i in range(1, len(s)):\n",
+    "        if s[i] == s[i-1]:\n",
+    "            z[1] += 1\n",
+    "        else:\n",
+    "            break\n",
+    "\n",
+    "    r, l = 0, 0\n",
+    "    if z[1] > 0:\n",
+    "        r, l = z[1], 1\n",
+    "\n",
+    "    for k in range(2, len(s)):\n",
+    "        assert z[k] == 0\n",
+    "        if k > r:\n",
+    "            # Case 1\n",
+    "            for i in range(k, len(s)):\n",
+    "                if s[i] == s[i-k]:\n",
+    "                    z[k] += 1\n",
+    "                else:\n",
+    "                    break\n",
+    "            r, l = k + z[k] - 1, k\n",
+    "        else:\n",
+    "            # Case 2\n",
+    "            # Calculate length of beta\n",
+    "            nbeta = r - k + 1\n",
+    "            zkp = z[k - l]\n",
+    "            if nbeta > zkp:\n",
+    "                # Case 2a: zkp wins\n",
+    "                z[k] = zkp\n",
+    "            else:\n",
+    "                # Case 2b: Compare characters just past r\n",
+    "                nmatch = 0\n",
+    "                for i in range(r+1, len(s)):\n",
+    "                    if s[i] == s[i - k]:\n",
+    "                        nmatch += 1\n",
+    "                    else:\n",
+    "                        break\n",
+    "                l, r = k, r + nmatch\n",
+    "                z[k] = r - k + 1\n",
+    "    return z\n",
+    "\n",
+    "\n",
+    "def n_array(s):\n",
+    "    \"\"\" Compile the N array (Gusfield theorem 2.2.2) from the Z array \"\"\"\n",
+    "    return z_array(s[::-1])[::-1]\n",
+    "\n",
+    "\n",
+    "def big_l_prime_array(p, n):\n",
+    "    \"\"\" Compile L' array (Gusfield theorem 2.2.2) using p and N array.\n",
+    "        L'[i] = largest index j less than n such that N[j] = |P[i:]| \"\"\"\n",
+    "    lp = [0] * len(p)\n",
+    "    for j in range(len(p)-1):\n",
+    "        i = len(p) - n[j]\n",
+    "        if i < len(p):\n",
+    "            lp[i] = j + 1\n",
+    "    return lp\n",
+    "\n",
+    "\n",
+    "def big_l_array(p, lp):\n",
+    "    \"\"\" Compile L array (Gusfield theorem 2.2.2) using p and L' array.\n",
+    "        L[i] = largest index j less than n such that N[j] >= |P[i:]| \"\"\"\n",
+    "    l = [0] * len(p)\n",
+    "    l[1] = lp[1]\n",
+    "    for i in range(2, len(p)):\n",
+    "        l[i] = max(l[i-1], lp[i])\n",
+    "    return l\n",
+    "\n",
+    "\n",
+    "def small_l_prime_array(n):\n",
+    "    \"\"\" Compile lp' array (Gusfield theorem 2.2.4) using N array. \"\"\"\n",
+    "    small_lp = [0] * len(n)\n",
+    "    for i in range(len(n)):\n",
+    "        if n[i] == i+1:  # prefix matching a suffix\n",
+    "            small_lp[len(n)-i-1] = i+1\n",
+    "    for i in range(len(n)-2, -1, -1):  # \"smear\" them out to the left\n",
+    "        if small_lp[i] == 0:\n",
+    "            small_lp[i] = small_lp[i+1]\n",
+    "    return small_lp\n",
+    "\n",
+    "\n",
+    "def good_suffix_table(p):\n",
+    "    \"\"\" Return tables needed to apply good suffix rule. \"\"\"\n",
+    "    n = n_array(p)\n",
+    "    lp = big_l_prime_array(p, n)\n",
+    "    return lp, big_l_array(p, lp), small_l_prime_array(n)\n",
+    "\n",
+    "\n",
+    "def good_suffix_mismatch(i, big_l_prime, small_l_prime):\n",
+    "    \"\"\" Given a mismatch at offset i, and given L/L' and l' arrays,\n",
+    "        return amount to shift as determined by good suffix rule. \"\"\"\n",
+    "    length = len(big_l_prime)\n",
+    "    assert i < length\n",
+    "    if i == length - 1:\n",
+    "        return 0\n",
+    "    i += 1  # i points to leftmost matching position of P\n",
+    "    if big_l_prime[i] > 0:\n",
+    "        return length - big_l_prime[i]\n",
+    "    return length - small_l_prime[i]\n",
+    "\n",
+    "\n",
+    "def good_suffix_match(small_l_prime):\n",
+    "    \"\"\" Given a full match of P to T, return amount to shift as\n",
+    "        determined by good suffix rule. \"\"\"\n",
+    "    return len(small_l_prime) - small_l_prime[1]\n",
+    "\n",
+    "\n",
+    "def dense_bad_char_tab(p, amap):\n",
+    "    \"\"\" Given pattern string and list with ordered alphabet characters, create\n",
+    "        and return a dense bad character table.  Table is indexed by offset\n",
+    "        then by character. \"\"\"\n",
+    "    tab = []\n",
+    "    nxt = [0] * len(amap)\n",
+    "    for i in range(0, len(p)):\n",
+    "        c = p[i]\n",
+    "        assert c in amap\n",
+    "        tab.append(nxt[:])\n",
+    "        nxt[amap[c]] = i+1\n",
+    "    return tab\n",
+    "\n",
+    "\n",
+    "class BoyerMoore(object):\n",
+    "    \"\"\" Encapsulates pattern and associated Boyer-Moore preprocessing. \"\"\"\n",
+    "\n",
+    "    def __init__(self, p, alphabet='ACGT'):\n",
+    "        # Create map from alphabet characters to integers\n",
+    "        self.amap = {alphabet[i]: i for i in range(len(alphabet))}\n",
+    "        # Make bad character rule table\n",
+    "        self.bad_char = dense_bad_char_tab(p, self.amap)\n",
+    "        # Create good suffix rule table\n",
+    "        _, self.big_l, self.small_l_prime = good_suffix_table(p)\n",
+    "\n",
+    "    def bad_character_rule(self, i, c):\n",
+    "        \"\"\" Return # skips given by bad character rule at offset i \"\"\"\n",
+    "        assert c in self.amap\n",
+    "        assert i < len(self.bad_char)\n",
+    "        ci = self.amap[c]\n",
+    "        return i - (self.bad_char[i][ci]-1)\n",
+    "\n",
+    "    def good_suffix_rule(self, i):\n",
+    "        \"\"\" Given a mismatch at offset i, return amount to shift\n",
+    "            as determined by (weak) good suffix rule. \"\"\"\n",
+    "        length = len(self.big_l)\n",
+    "        assert i < length\n",
+    "        if i == length - 1:\n",
+    "            return 0\n",
+    "        i += 1  # i points to leftmost matching position of P\n",
+    "        if self.big_l[i] > 0:\n",
+    "            return length - self.big_l[i]\n",
+    "        return length - self.small_l_prime[i]\n",
+    "\n",
+    "    def match_skip(self):\n",
+    "        \"\"\" Return amount to shift in case where P matches T \"\"\"\n",
+    "        return len(self.small_l_prime) - self.small_l_prime[1]\n",
+    "\n",
+    "\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 70,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "([56922], 127974, 9381, 127974)"
+      ]
+     },
+     "execution_count": 70,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "p1_bm=BoyerMoore(p1)\n",
+    "boyer_moore(p1,p1_bm,seq)\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 4,
+   "metadata": {
+    "collapsed": true
+   },
+   "outputs": [],
+   "source": [
+    "import bisect\n",
+    "\n",
+    "\n",
+    "class Index(object):\n",
+    "    \"\"\" Holds a substring index for a text T \"\"\"\n",
+    "\n",
+    "    def __init__(self, t, k):\n",
+    "        \"\"\" Create index from all substrings of t of length k \"\"\"\n",
+    "        self.k = k  # k-mer length (k)\n",
+    "        self.index = []\n",
+    "        for i in range(len(t) - k + 1):  # for each k-mer\n",
+    "            self.index.append((t[i:i+k], i))  # add (k-mer, offset) pair\n",
+    "        self.index.sort()  # alphabetize by k-mer\n",
+    "\n",
+    "    def query(self, p):\n",
+    "        \"\"\" Return index hits for first k-mer of p \"\"\"\n",
+    "        kmer = p[:self.k]  # query with first k-mer\n",
+    "        i = bisect.bisect_left(self.index, (kmer, -1))  # binary search\n",
+    "        hits = []\n",
+    "        while i < len(self.index):  # collect matching index entries\n",
+    "            if self.index[i][0] != kmer:\n",
+    "                break\n",
+    "            hits.append(self.index[i][1])\n",
+    "            i += 1\n",
+    "        return hits\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 67,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "[0, 14]"
+      ]
+     },
+     "execution_count": 67,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "t = 'to-morrow and to-morrow and to-mdrrow creeps in this petty pace'\n",
+    "p = 'to-morrow and to-morrow '\n",
+    "ind=Index(t,10)\n",
+    "ind.query(p)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 79,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [],
+   "source": [
+    "def appro(p,t,n):\n",
+    "    matches=[]\n",
+    "    seg=3\n",
+    "    ind=Index(t,8)\n",
+    "    hit=0\n",
+    "    for i in range(seg):\n",
+    "        start=i*8\n",
+    "        end=i*8+8\n",
+    "        cand=ind.query(p[start:end])\n",
+    "        hit+=len(cand)\n",
+    "        ##print(start,end)\n",
+    "        if(len(cand)>0):\n",
+    "            ##print(cand)\n",
+    "            for pos in cand:\n",
+    "                mismatch=0 ## count mismatch\n",
+    "                if pos+len(p)-start<len(t):\n",
+    "                    for j in range(-start,len(p)-start,1):\n",
+    "                        if p[start+j]!=t[pos+j]:\n",
+    "                            mismatch+=1\n",
+    "                if mismatch<=n:\n",
+    "                        matches.append(pos-start)\n",
+    "    return set(matches),len(matches),len(set(matches)),hit\n",
+    "\n",
+    "\n",
+    "                    \n",
+    "        \n",
+    "    \n",
+    "    "
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 44,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "({56922,\n",
+       "  147558,\n",
+       "  160162,\n",
+       "  160729,\n",
+       "  191452,\n",
+       "  364263,\n",
+       "  429299,\n",
+       "  465647,\n",
+       "  657496,\n",
+       "  717706,\n",
+       "  724927},\n",
+       " 25,\n",
+       " 11)"
+      ]
+     },
+     "execution_count": 44,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "appro(p1,seq,2)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 45,
+   "metadata": {
+    "collapsed": true
+   },
+   "outputs": [],
+   "source": [
+    "import bisect\n",
+    "   \n",
+    "class SubseqIndex(object):\n",
+    "    \"\"\" Holds a subsequence index for a text T \"\"\"\n",
+    "    \n",
+    "    def __init__(self, t, k, ival):\n",
+    "        \"\"\" Create index from all subsequences consisting of k characters\n",
+    "            spaced ival positions apart.  E.g., SubseqIndex(\"ATAT\", 2, 2)\n",
+    "            extracts (\"AA\", 0) and (\"TT\", 1). \"\"\"\n",
+    "        self.k = k  # num characters per subsequence extracted\n",
+    "        self.ival = ival  # space between them; 1=adjacent, 2=every other, etc\n",
+    "        self.index = []\n",
+    "        self.span = 1 + ival * (k - 1)\n",
+    "        for i in range(len(t) - self.span + 1):  # for each subseq\n",
+    "            self.index.append((t[i:i+self.span:ival], i))  # add (subseq, offset)\n",
+    "        self.index.sort()  # alphabetize by subseq\n",
+    "    \n",
+    "    def query(self, p):\n",
+    "        \"\"\" Return index hits for first subseq of p \"\"\"\n",
+    "        subseq = p[:self.span:self.ival]  # query with first subseq\n",
+    "        i = bisect.bisect_left(self.index, (subseq, -1))  # binary search\n",
+    "        hits = []\n",
+    "        while i < len(self.index):  # collect matching index entries\n",
+    "            if self.index[i][0] != subseq:\n",
+    "                break\n",
+    "            hits.append(self.index[i][1])\n",
+    "            i += 1\n",
+    "        return hits"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 82,
+   "metadata": {
+    "collapsed": true
+   },
+   "outputs": [],
+   "source": [
+    "def appro2(p,t,n):\n",
+    "    ind2=SubseqIndex(t,8,3)\n",
+    "    matches=[]\n",
+    "    hit=0\n",
+    "    for i in range(3):\n",
+    "        cand2=ind2.query(p[i:])\n",
+    "        hit+=len(cand2)\n",
+    "        for pos in cand2:\n",
+    "            mismatch=0\n",
+    "            for j in range(-i,len(p)-i,1):\n",
+    "                if p[j+i]!=t[pos+j]:\n",
+    "                        mismatch+=1\n",
+    "            if mismatch<=n:matches.append(pos-i)\n",
+    "    return matches,len(set(matches)),len(matches),hit\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 89,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "([56922,\n",
+       "  84641,\n",
+       "  147558,\n",
+       "  191452,\n",
+       "  262042,\n",
+       "  273669,\n",
+       "  364263,\n",
+       "  465647,\n",
+       "  635931,\n",
+       "  657496,\n",
+       "  681737,\n",
+       "  717706,\n",
+       "  747359,\n",
+       "  56922,\n",
+       "  84641,\n",
+       "  147558,\n",
+       "  160162,\n",
+       "  160729,\n",
+       "  262042,\n",
+       "  273669,\n",
+       "  364263,\n",
+       "  421221,\n",
+       "  429299,\n",
+       "  465647,\n",
+       "  551134,\n",
+       "  635931,\n",
+       "  657496,\n",
+       "  681737,\n",
+       "  717706,\n",
+       "  724927,\n",
+       "  56922,\n",
+       "  160729,\n",
+       "  191452,\n",
+       "  262042,\n",
+       "  364263,\n",
+       "  429299,\n",
+       "  657496,\n",
+       "  717706,\n",
+       "  724927,\n",
+       "  747359],\n",
+       " 19,\n",
+       " 40,\n",
+       " 79)"
+      ]
+     },
+     "execution_count": 89,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "appro2(p2,seq,2)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 88,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "([0, 0, 14, 0, 14], 2, 5, 5)"
+      ]
+     },
+     "execution_count": 88,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "appro2(p,t,2)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 84,
+   "metadata": {
+    "collapsed": true
+   },
+   "outputs": [],
+   "source": [
+    "def approximate_match_subseq(p, t, n, ival):\n",
+    "    segment_length = int(round(len(p) / (n+1)))\n",
+    "    all_matches = set()\n",
+    "    p_idx = SubseqIndex(t, segment_length, ival)\n",
+    "    idx_hits = 0\n",
+    "    for i in range(n+1):\n",
+    "        start = i\n",
+    "        matches = p_idx.query(p[start:])\n",
+    "        \n",
+    "        # Extend matching segments to see if whole p matches\n",
+    "        for m in matches:\n",
+    "            idx_hits += 1\n",
+    "            if m < start or m-start+len(p) > len(t):\n",
+    "                continue\n",
+    "            \n",
+    "            mismatches = 0\n",
+    "            \n",
+    "            for j in range(0, len(p)):\n",
+    "                if not p[j] == t[m-start+j]:\n",
+    "                    mismatches += 1\n",
+    "                    if mismatches > n:\n",
+    "                        break\n",
+    "            \n",
+    "            if mismatches <= n:\n",
+    "                all_matches.add(m - start)\n",
+    "    return list(all_matches), idx_hits\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 86,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "([84641,\n",
+       "  160162,\n",
+       "  273669,\n",
+       "  147558,\n",
+       "  364263,\n",
+       "  421221,\n",
+       "  681737,\n",
+       "  717706,\n",
+       "  724927,\n",
+       "  465647,\n",
+       "  429299,\n",
+       "  657496,\n",
+       "  160729,\n",
+       "  56922,\n",
+       "  635931,\n",
+       "  191452,\n",
+       "  262042,\n",
+       "  551134,\n",
+       "  747359],\n",
+       " 79)"
+      ]
+     },
+     "execution_count": 86,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "approximate_match_subseq(p2,seq,2,3)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 87,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "({56922,\n",
+       "  84641,\n",
+       "  147558,\n",
+       "  160162,\n",
+       "  160729,\n",
+       "  191452,\n",
+       "  262042,\n",
+       "  273669,\n",
+       "  364263,\n",
+       "  421221,\n",
+       "  429299,\n",
+       "  465647,\n",
+       "  551134,\n",
+       "  635931,\n",
+       "  657496,\n",
+       "  681737,\n",
+       "  717706,\n",
+       "  724927,\n",
+       "  747359},\n",
+       " 40,\n",
+       " 19,\n",
+       " 90)"
+      ]
+     },
+     "execution_count": 87,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "appro(p2,seq,2)\n"
+   ]
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "Python 2",
+   "language": "python",
+   "name": "python2"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 2
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython2",
+   "version": "2.7.11"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 0
+}
